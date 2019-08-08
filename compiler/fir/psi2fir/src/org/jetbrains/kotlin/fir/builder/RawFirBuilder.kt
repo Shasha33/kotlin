@@ -942,6 +942,7 @@ class RawFirBuilder(session: FirSession, val stubMode: Boolean) : BaseFirBuilder
                 if (hasSubject) {
                     subject.bind(this)
                 }
+                var thereIsElseBranch = false
                 for (entry in expression.entries) {
                     val branch = entry.expression.toFirBlock()
                     branches += if (!entry.isElse) {
@@ -959,8 +960,12 @@ class RawFirBuilder(session: FirSession, val stubMode: Boolean) : BaseFirBuilder
                             FirWhenBranchImpl(entry, firCondition, branch)
                         }
                     } else {
+                        thereIsElseBranch = true
                         FirWhenBranchImpl(entry, FirElseIfTrueCondition(null), branch)
                     }
+                }
+                if (!thereIsElseBranch) {
+                    branches += FirWhenBranchImpl(null, FirElseIfTrueCondition(null), FirEmptyExpressionBlock())
                 }
             }
         }
