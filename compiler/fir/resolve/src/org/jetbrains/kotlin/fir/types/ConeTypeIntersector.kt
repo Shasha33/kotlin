@@ -17,6 +17,13 @@ object ConeTypeIntersector {
         return intersectTypes(context, types, types.map { IntersectionStatus.FROM_INFERENCE })
     }
 
+    fun intersectTypesFromSmartcasts(context: ConeTypeContext, originalType: ConeKotlinType, smartCastedType: ConeKotlinType): ConeKotlinType {
+        require(context is ConeInferenceContext)
+        val types = listOf(originalType, smartCastedType)
+        val sources = listOf(IntersectionStatus.FROM_INFERENCE, IntersectionStatus.FROM_SMARTCAST)
+        return intersectTypes(context, types, sources)
+    }
+
     private fun intersectTypes(
         context: ConeInferenceContext,
         types: List<ConeKotlinType>,
