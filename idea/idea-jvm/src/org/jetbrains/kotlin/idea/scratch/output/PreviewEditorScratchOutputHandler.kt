@@ -7,18 +7,17 @@ package org.jetbrains.kotlin.idea.scratch.output
 
 import com.intellij.diff.util.DiffUtil
 import com.intellij.openapi.Disposable
- import com.intellij.openapi.application.TransactionGuard
+import com.intellij.openapi.application.TransactionGuard
 import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.FoldRegion
 import com.intellij.openapi.editor.FoldingModel
-import com.intellij.openapi.editor.markup.HighlighterLayer
-import com.intellij.openapi.editor.markup.HighlighterTargetArea
-import com.intellij.openapi.editor.markup.MarkupModel
+import com.intellij.openapi.editor.markup.*
 import com.intellij.openapi.util.text.StringUtil
 import org.jetbrains.kotlin.idea.scratch.ScratchExpression
 import org.jetbrains.kotlin.idea.scratch.ScratchFile
+import java.awt.Color
 import java.util.*
 import kotlin.math.max
 
@@ -77,6 +76,7 @@ class PreviewOutputBlocksManager(editor: Editor) {
     private val markupModel: MarkupModel = editor.markupModel
 
     private val blocks: NavigableMap<ScratchExpression, OutputBlock> = TreeMap(Comparator.comparingInt { it.lineStart })
+    private val blockHighlights: MutableMap<OutputBlock, RangeHighlighter> = mutableMapOf()
 
     fun computeSourceToPreviewAlignments(): List<Pair<Int, Int>> = blocks.values.map { it.sourceExpression.lineStart to it.lineStart }
 
@@ -97,6 +97,11 @@ class PreviewOutputBlocksManager(editor: Editor) {
         }
     }
 
+    fun clearAllHighlights() {
+        blockHighlights.values.forEach(markupModel::removeHighlighter)
+        blockHighlights.clear()
+    }
+
     inner class OutputBlock(val sourceExpression: ScratchExpression) {
         private val outputs: MutableList<ScratchOutput> = mutableListOf()
 
@@ -111,12 +116,34 @@ class PreviewOutputBlocksManager(editor: Editor) {
         fun addOutput(output: ScratchOutput) {
             printAndSaveOutput(output)
 
+            blocks.lowerEntry(sourceExpression)?.value?.updateFolding()
             blocks.tailMap(sourceExpression).values.forEach {
                 it.recalculatePosition()
                 it.updateFolding()
             }
         }
 
+        fun addHighlight(color: Color) {
+            clearHighlight()
+            blockHighlights[this] = markupModel.highlightLines(
+                lineStart,
+                lineEnd,
+                TextAttributes().apply { backgroundColor = color },
+                targetArea = HighlighterTargetArea.LINES_IN_RANGE
+            )
+        }
+
+        private fun clearHighlight() {
+            blockHighlights.remove(this)?.let(markupModel::removeHighlighter)
+        }
+
+        /**
+         * We want to make sure that changes in document happen in single edit, because if they are not,
+         * listeners may see inconsistent document, which may cause troubles if they will try to highlight it
+         * in some way. That's why it is important that [insertStringAtLine] does only one insert in the document,
+         * and [output] is inserted into the [outputs] before the edits, so [OutputBlock] can correctly see
+         * all its output expressions and highlight the whole block.
+         */
         private fun printAndSaveOutput(output: ScratchOutput) {
             val beforeAdding = lineEnd
             val currentOutputStartLine = if (outputs.isEmpty()) lineStart else beforeAdding + 1
@@ -129,21 +156,7 @@ class PreviewOutputBlocksManager(editor: Editor) {
                 }
             }
 
-            val insertedTextStart = targetDocument.getLineStartOffset(currentOutputStartLine)
-            val insertedTextEnd = targetDocument.getLineEndOffset(lineEnd)
-            colorRange(insertedTextStart, insertedTextEnd, output.type)
-        }
-
-        private fun colorRange(startOffset: Int, endOffset: Int, outputType: ScratchOutputType) {
-            val textAttributes = getAttributesForOutputType(outputType)
-
-            markupModel.addRangeHighlighter(
-                startOffset,
-                endOffset,
-                HighlighterLayer.SYNTAX,
-                textAttributes,
-                HighlighterTargetArea.EXACT_RANGE
-            )
+            markupModel.highlightLines(currentOutputStartLine, lineEnd, getAttributesForOutputType(output.type))
         }
 
         private fun recalculatePosition() {
@@ -181,6 +194,8 @@ class PreviewOutputBlocksManager(editor: Editor) {
         val compensation = max(differenceBetweenSourceAndOutputHeight, 0)
         return previous.lineEnd + compensation + distanceBetweenSources
     }
+
+    fun getBlockAtLine(line: Int): OutputBlock? = blocks.values.find { line in it.lineStart..it.lineEnd }
 }
 
 private fun countNewLines(list: List<ScratchOutput>) = list.sumBy { StringUtil.countNewLines(it.text) } + max(list.size - 1, 0)
@@ -188,10 +203,29 @@ private fun countNewLines(list: List<ScratchOutput>) = list.sumBy { StringUtil.c
 private fun Document.getLineContent(lineNumber: Int) =
     DiffUtil.getLinesContent(this, lineNumber, lineNumber + 1).toString()
 
-fun Document.insertStringAtLine(lineNumber: Int, text: String) {
-    while (DiffUtil.getLineCount(this) <= lineNumber) {
-        insertString(textLength, "\n")
+private fun Document.insertStringAtLine(lineNumber: Int, text: String) {
+    val missingNewLines = lineNumber - (DiffUtil.getLineCount(this) - 1)
+    if (missingNewLines > 0) {
+        insertString(textLength, "${"\n".repeat(missingNewLines)}$text")
+    } else {
+        insertString(getLineStartOffset(lineNumber), text)
     }
+}
 
-    insertString(getLineStartOffset(lineNumber), text)
+private fun MarkupModel.highlightLines(
+    from: Int,
+    to: Int,
+    attributes: TextAttributes,
+    targetArea: HighlighterTargetArea = HighlighterTargetArea.EXACT_RANGE
+): RangeHighlighter {
+    val fromOffset = document.getLineStartOffset(from)
+    val toOffset = document.getLineEndOffset(to)
+
+    return addRangeHighlighter(
+        fromOffset,
+        toOffset,
+        HighlighterLayer.CARET_ROW,
+        attributes,
+        targetArea
+    )
 }
