@@ -308,7 +308,6 @@ class ControlFlowGraphBuilder : ControlFlowGraphNodeBuilder() {
         levelCounter--
         return binaryOrExitNodes.pop().also {
             addEdge(lastNodes.pop(), it)
-            addEdge(lastNodes.pop(), it)
             lastNodes.push(it)
         }
     }
