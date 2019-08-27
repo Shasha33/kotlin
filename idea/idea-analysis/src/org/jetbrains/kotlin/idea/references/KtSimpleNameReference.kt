@@ -175,7 +175,10 @@ class KtSimpleNameReference(expression: KtSimpleNameExpression) : KtSimpleRefere
         if (expression !is KtNameReferenceExpression) return expression
         if (expression.parent is KtThisExpression || expression.parent is KtSuperExpression) return expression // TODO: it's a bad design of PSI tree, we should change it
 
-        val newExpression = expression.changeQualifiedName(fqName.quoteIfNeeded(), targetElement)
+        val newExpression = expression.changeQualifiedName(
+            fqName.quoteIfNeeded().let { if (expression.parent is KtUserType || shorteningMode == ShorteningMode.NO_SHORTENING) it else it.withRootPrefix() },
+            targetElement
+        )
         val newQualifiedElement = newExpression.getQualifiedElementOrCallableRef()
 
         if (shorteningMode == ShorteningMode.NO_SHORTENING) return newExpression

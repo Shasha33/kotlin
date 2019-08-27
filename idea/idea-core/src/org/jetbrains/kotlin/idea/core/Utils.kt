@@ -33,6 +33,7 @@ import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.*
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.DelegatingBindingTrace
+import org.jetbrains.kotlin.resolve.QualifiedExpressionResolver
 import org.jetbrains.kotlin.resolve.bindingContextUtil.getDataFlowInfoBefore
 import org.jetbrains.kotlin.resolve.calls.CallResolver
 import org.jetbrains.kotlin.resolve.calls.context.BasicCallResolutionContext
@@ -170,6 +171,7 @@ fun FqName.quoteSegmentsIfNeeded(): String {
 }
 
 fun FqName.quoteIfNeeded() = FqName(quoteSegmentsIfNeeded())
+fun FqName.withRootPrefix() = FqName(QualifiedExpressionResolver.ROOT_PREFIX_WITH_DOT + asString())
 
 fun isEnumCompanionPropertyWithEntryConflict(element: PsiElement, expectedName: String): Boolean {
     if (element !is KtProperty) return false
