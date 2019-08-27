@@ -208,6 +208,7 @@ class ControlFlowGraphBuilder : ControlFlowGraphNodeBuilder() {
         // we should remove it
         require(lastNodes.pop() is WhenBranchConditionExitNode)
         val whenExitNode = whenExitNodes.pop()
+        whenExitNode.markAsDeadIfNecessary()
         lastNodes.push(whenExitNode)
         return whenExitNode
     }
@@ -249,6 +250,7 @@ class ControlFlowGraphBuilder : ControlFlowGraphNodeBuilder() {
             addEdge(loopBlockExitNode, conditionEnterNode, propagateDeadness = false)
         }
         val loopExitNode = loopExitNodes.pop()
+        loopExitNode.markAsDeadIfNecessary()
         lastNodes.push(loopExitNode)
         levelCounter--
         return loopBlockExitNode to loopExitNode
@@ -287,7 +289,8 @@ class ControlFlowGraphBuilder : ControlFlowGraphNodeBuilder() {
         require(blockEnterNode is LoopBlockEnterNode)
         addEdge(conditionExitNode, blockEnterNode, propagateDeadness = false)
         val loopExit = loopExitNodes.pop()
-        addEdge(conditionExitNode, loopExit)
+        addEdge(conditionExitNode, loopExit, propagateDeadness = false)
+        loopExit.markAsDeadIfNecessary()
         lastNodes.push(loopExit)
         levelCounter--
         return loopExit
@@ -312,7 +315,7 @@ class ControlFlowGraphBuilder : ControlFlowGraphNodeBuilder() {
         return binaryAndExitNodes.pop().also {
             val rightNode = lastNodes.pop()
             addEdge(rightNode, it, propagateDeadness = false, isDead = it.leftOperandNode.booleanConstValue == false)
-            it.isDead = it.previousNodes.all { it.isDead }
+            it.markAsDeadIfNecessary()
             lastNodes.push(it)
         }
     }
@@ -344,7 +347,7 @@ class ControlFlowGraphBuilder : ControlFlowGraphNodeBuilder() {
         return binaryOrExitNodes.pop().also {
             val rightNode = lastNodes.pop()
             addEdge(rightNode, it, propagateDeadness = false)
-            it.isDead = it.previousNodes.all { it.isDead }
+            it.markAsDeadIfNecessary()
             lastNodes.push(it)
         }
     }
