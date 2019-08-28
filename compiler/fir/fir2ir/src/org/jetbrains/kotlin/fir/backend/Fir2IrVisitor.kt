@@ -746,22 +746,18 @@ internal class Fir2IrVisitor(
     }
 
     private fun IrExpression.applyReceivers(qualifiedAccess: FirQualifiedAccess): IrExpression {
-        if (qualifiedAccess.explicitReceiver != null &&
-            qualifiedAccess.dispatchReceiver is FirNoReceiverExpression &&
-            qualifiedAccess.extensionReceiver is FirNoReceiverExpression
-        ) {
-            throw AssertionError()
-        }
         return when (this) {
             is IrCallImpl -> {
                 val ownerFunction = symbol.owner
                 if (ownerFunction.dispatchReceiverParameter != null) {
                     dispatchReceiver = qualifiedAccess.dispatchReceiver.takeIf { it !is FirNoReceiverExpression }?.toIrExpression()
+                        ?: qualifiedAccess.explicitReceiver?.toIrExpression() // NB: this applies to the situation when call is unresolved
                     if (dispatchReceiver == null) {
                         throw AssertionError()
                     }
                 } else if (ownerFunction.extensionReceiverParameter != null) {
                     extensionReceiver = qualifiedAccess.extensionReceiver.takeIf { it !is FirNoReceiverExpression }?.toIrExpression()
+                        ?: qualifiedAccess.explicitReceiver?.toIrExpression()
                     if (extensionReceiver == null) {
                         throw AssertionError()
                     }
@@ -769,9 +765,13 @@ internal class Fir2IrVisitor(
                 this
             }
             is IrFieldExpressionBase -> {
-                receiver = qualifiedAccess.dispatchReceiver.takeIf { it !is FirNoReceiverExpression }?.toIrExpression()
-                if (receiver == null) {
-                    throw AssertionError()
+                val ownerField = symbol.owner
+                if (!ownerField.isStatic) {
+                    receiver = qualifiedAccess.dispatchReceiver.takeIf { it !is FirNoReceiverExpression }?.toIrExpression()
+                        ?: qualifiedAccess.explicitReceiver?.toIrExpression()
+                    if (receiver == null) {
+                        throw AssertionError()
+                    }
                 }
                 this
             }
