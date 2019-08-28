@@ -25,7 +25,6 @@ import org.jetbrains.kotlin.resolve.ImportedFromObjectCallableDescriptor
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall
 import org.jetbrains.kotlin.resolve.inline.InlineUtil
 import org.jetbrains.kotlin.resolve.inline.isInlineOnly
-import org.jetbrains.kotlin.resolve.jvm.jvmSignature.JvmMethodGenericSignature
 import org.jetbrains.kotlin.resolve.jvm.jvmSignature.JvmMethodSignature
 import org.jetbrains.kotlin.resolve.scopes.MemberScope
 import org.jetbrains.kotlin.serialization.deserialization.descriptors.DescriptorWithContainerSource
@@ -45,13 +44,14 @@ import kotlin.math.max
 abstract class InlineCodegen<out T : BaseExpressionCodegen>(
     protected val codegen: T,
     protected val state: GenerationState,
-    function: FunctionDescriptor,
+    protected val functionDescriptor: FunctionDescriptor,
+    protected val jvmSignature: JvmMethodSignature,
     private val typeParameterMappings: TypeParameterMappings,
     protected val sourceCompiler: SourceCompilerForInline
 ) {
     init {
-        assert(InlineUtil.isInline(function) || InlineUtil.isArrayConstructorWithLambda(function)) {
-            "InlineCodegen can inline only inline functions and array constructors: " + function
+        assert(InlineUtil.isInline(functionDescriptor)) {
+            "InlineCodegen can inline only inline functions: $functionDescriptor"
         }
     }
 
@@ -64,14 +64,6 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
 
     private val reifiedTypeInliner =
         ReifiedTypeInliner(typeParameterMappings, state.typeMapper, state.languageVersionSettings)
-
-    protected val functionDescriptor: FunctionDescriptor =
-        if (InlineUtil.isArrayConstructorWithLambda(function))
-            FictitiousArrayConstructor.create(function as ConstructorDescriptor)
-        else
-            function.original
-
-    protected val jvmSignature: JvmMethodGenericSignature
 
     private val isSameModule: Boolean
 
@@ -91,12 +83,10 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
     protected var methodHandleInDefaultMethodIndex = -1
 
     init {
-        sourceCompiler.initializeInlineFunctionContext(functionDescriptor)
-        jvmSignature = typeMapper.mapSignatureWithGeneric(functionDescriptor, sourceCompiler.contextKind)
         isSameModule = sourceCompiler.isCallInsideSameModuleAsDeclared(functionDescriptor)
 
         if (functionDescriptor !is FictitiousArrayConstructor) {
-            val functionOrAccessorName = typeMapper.mapAsmMethod(function).name
+            val functionOrAccessorName = jvmSignature.asmMethod.name
             //track changes for property accessor and @JvmName inline functions/property accessors
             if (functionOrAccessorName != functionDescriptor.name.asString()) {
                 val scope = getMemberScope(functionDescriptor)

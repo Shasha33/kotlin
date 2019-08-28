@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.util.dump
 import org.jetbrains.kotlin.ir.util.getArguments
+import org.jetbrains.kotlin.resolve.jvm.jvmSignature.JvmMethodSignature
 import org.jetbrains.kotlin.utils.keysToMap
 import org.jetbrains.org.objectweb.asm.Type
 import org.jetbrains.org.objectweb.asm.commons.Method
@@ -27,9 +28,10 @@ class IrInlineCodegen(
     codegen: ExpressionCodegen,
     state: GenerationState,
     function: FunctionDescriptor,
+    signature: JvmMethodSignature,
     typeParameterMappings: IrTypeParameterMappings,
     sourceCompiler: SourceCompilerForInline
-) : InlineCodegen<ExpressionCodegen>(codegen, state, function, typeParameterMappings.toTypeParameterMappings(), sourceCompiler),
+) : InlineCodegen<ExpressionCodegen>(codegen, state, function, signature, typeParameterMappings.toTypeParameterMappings(), sourceCompiler),
     IrCallGenerator {
     override fun generateAssertFieldIfNeeded(info: RootInliningContext) {
         // TODO: JVM assertions are not implemented yet in IR backend

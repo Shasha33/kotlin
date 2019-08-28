@@ -327,7 +327,7 @@ class ExpressionCodegen(
 
         val callable = methodSignatureMapper.mapToCallableMethod(expression)
         val callee = expression.symbol.owner
-        val callGenerator = getOrCreateCallGenerator(expression, data)
+        val callGenerator = getOrCreateCallGenerator(expression, data, callable.signature)
         val asmType = if (expression is IrConstructorCall) typeMapper.mapTypeAsDeclaration(expression.type) else expression.asmType
 
         when {
@@ -960,7 +960,9 @@ class ExpressionCodegen(
         return classReference.onStack
     }
 
-    private fun getOrCreateCallGenerator(element: IrFunctionAccessExpression, data: BlockInfo): IrCallGenerator {
+    private fun getOrCreateCallGenerator(
+        element: IrFunctionAccessExpression, data: BlockInfo, signature: JvmMethodSignature
+    ): IrCallGenerator {
         if (!element.symbol.owner.isInlineFunctionCall(context) ||
             classCodegen.irClass.fileParent.fileEntry is MultifileFacadeFileEntry
         ) {
@@ -996,7 +998,7 @@ class ExpressionCodegen(
         }
 
         val original = (callee as? IrSimpleFunction)?.resolveFakeOverride() ?: irFunction
-        return IrInlineCodegen(this, state, original.descriptor, mappings, IrSourceCompilerForInline(state, element, this, data))
+        return IrInlineCodegen(this, state, original.descriptor, signature, mappings, IrSourceCompilerForInline(state, element, this, data))
     }
 
     private fun consumeReifiedOperationMarker(typeParameter: IrTypeParameter) {
