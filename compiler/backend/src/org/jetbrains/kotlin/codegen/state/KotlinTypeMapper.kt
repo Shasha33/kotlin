@@ -88,7 +88,7 @@ class KotlinTypeMapper @JvmOverloads constructor(
     val jvmTarget: JvmTarget = JvmTarget.DEFAULT,
     private val isIrBackend: Boolean = false,
     private val typePreprocessor: ((KotlinType) -> KotlinType?)? = null
-) {
+): KotlinTypeMapperBase() {
     private val isReleaseCoroutines = languageVersionSettings.supportsFeature(LanguageFeature.ReleaseCoroutines)
 
     private val typeMappingConfiguration = object : TypeMappingConfiguration<Type> {
@@ -219,7 +219,7 @@ class KotlinTypeMapper @JvmOverloads constructor(
         return mapType(type, signatureVisitor, TypeMappingMode.GENERIC_ARGUMENT)
     }
 
-    fun mapClass(classifier: ClassifierDescriptor): Type {
+    override fun mapClass(classifier: ClassifierDescriptor): Type {
         return mapType(classifier.defaultType, null, TypeMappingMode.CLASS_DECLARATION)
     }
 
@@ -267,10 +267,6 @@ class KotlinTypeMapper @JvmOverloads constructor(
 
     private fun mapInlineClassType(kotlinType: KotlinType): Type {
         return mapInlineClassType(kotlinType, TypeMappingMode.DEFAULT, typeMappingConfiguration)
-    }
-
-    fun mapDefaultImpls(descriptor: ClassDescriptor): Type {
-        return Type.getObjectType(mapType(descriptor).internalName + JvmAbi.DEFAULT_IMPLS_SUFFIX)
     }
 
     private fun writeGenericType(
