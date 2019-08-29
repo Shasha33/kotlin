@@ -175,7 +175,7 @@ class ScopeTowerLevel(
                 if (candidate.hasConsistentReceivers(extensionReceiver)) {
                     val dispatchReceiverValue = when (candidate) {
                         is FirBackingFieldSymbol -> candidate.fir.symbol.dispatchReceiverValue()
-                        else -> null
+                        else -> candidate.dispatchReceiverValue()
                     }
                     processor.consumeCandidate(
                         candidate as T, dispatchReceiverValue = dispatchReceiverValue,
@@ -188,7 +188,7 @@ class ScopeTowerLevel(
             TowerScopeLevel.Token.Functions -> scope.processFunctionsByName(name) { candidate ->
                 if (candidate.hasConsistentReceivers(extensionReceiver)) {
                     processor.consumeCandidate(
-                        candidate as T, dispatchReceiverValue = null,
+                        candidate as T, dispatchReceiverValue = candidate.dispatchReceiverValue(),
                         implicitExtensionReceiverValue = implicitExtensionReceiver
                     )
                 } else {
