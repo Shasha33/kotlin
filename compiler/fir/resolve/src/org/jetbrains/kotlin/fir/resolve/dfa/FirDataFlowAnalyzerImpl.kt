@@ -43,9 +43,9 @@ class FirDataFlowAnalyzerImpl(transformer: FirBodyResolveTransformer) : FirDataF
         val symbol: FirBasedSymbol<*> = qualifiedAccessExpression.resolvedSymbol ?: return null
         val variable = variableStorage[symbol]?.real ?: return null
         val smartCastTypes = graphBuilder.lastNode.flow.approvedFacts(variable)?.exactType ?: return null
-        val smartCastType = context.myIntersectTypes(smartCastTypes.toList()) ?: return null
         val originalType = qualifiedAccessExpression.typeRef.coneTypeSafe<ConeKotlinType>() ?: return null
-        return ConeTypeIntersector.intersectTypesFromSmartcasts(context, originalType, smartCastType)
+        val allTypes = smartCastTypes.toMutableList().also { it += originalType }
+        return ConeTypeIntersector.intersectTypes(context, allTypes)
     }
 
     // ----------------------------------- Named function -----------------------------------

@@ -5,13 +5,14 @@
 
 package org.jetbrains.kotlin.fir.resolve.dfa
 
+import org.jetbrains.kotlin.fir.resolve.calls.ConeInferenceContext
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.fir.types.ConeTypeContext
 import org.jetbrains.kotlin.fir.types.ConeTypeIntersector
 import org.jetbrains.kotlin.resolve.calls.NewCommonSuperTypeCalculator
 import org.jetbrains.kotlin.types.model.TypeSystemCommonSuperTypesContext
 
-interface DataFlowInferenceContext : ConeTypeContext,
+interface DataFlowInferenceContext : ConeInferenceContext,
     TypeSystemCommonSuperTypesContext {
     fun myCommonSuperType(types: List<ConeKotlinType>): ConeKotlinType? {
         return when (types.size) {
