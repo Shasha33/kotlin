@@ -176,7 +176,17 @@ class KtSimpleNameReference(expression: KtSimpleNameExpression) : KtSimpleRefere
         if (expression.parent is KtThisExpression || expression.parent is KtSuperExpression) return expression // TODO: it's a bad design of PSI tree, we should change it
 
         val newExpression = expression.changeQualifiedName(
-            fqName.quoteIfNeeded().let { if (expression.parent is KtUserType || shorteningMode == ShorteningMode.NO_SHORTENING) it else it.withRootPrefix() },
+            fqName.quoteIfNeeded().let {
+                if (expression.getParentOfType<KtElement>(
+                        true,
+                        KtDotQualifiedExpression::class.java,
+                        KtUserType::class.java
+                    ) == null || shorteningMode == ShorteningMode.NO_SHORTENING
+                )
+                    it
+                else
+                    it.withRootPrefix()
+            },
             targetElement
         )
         val newQualifiedElement = newExpression.getQualifiedElementOrCallableRef()

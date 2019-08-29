@@ -1,4 +1,3 @@
 
-// todo must be: s: same
-fun f(s: <selection>same.same</selection>) {
+fun f(s: <selection>___rO0T___.same.same</selection>) {
 }

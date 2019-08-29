@@ -25,6 +25,7 @@ import org.jetbrains.kotlin.psi.psiUtil.*
 import org.jetbrains.kotlin.renderer.DescriptorRenderer
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.QualifiedExpressionResolver.Companion.ROOT_PREFIX
+import org.jetbrains.kotlin.resolve.QualifiedExpressionResolver.Companion.ROOT_PREFIX_WITH_DOT
 import org.jetbrains.kotlin.resolve.calls.callUtil.getCall
 import org.jetbrains.kotlin.resolve.calls.callUtil.getCalleeExpressionIfAny
 import org.jetbrains.kotlin.resolve.calls.callUtil.getResolvedCall
@@ -384,7 +385,15 @@ class ShortenReferences(val options: (KtElement) -> Options = { Options.DEFAULT 
                 }
             }
 
-        override fun analyzeQualifiedElement(element: KtUserType, bindingContext: BindingContext): AnalyzeQualifiedElementResult {
+        override fun analyzeQualifiedElement(element: KtUserType, bindingContext: BindingContext): AnalyzeQualifiedElementResult =
+            analyzeQualifiedElement2(element, bindingContext).let {
+                if (it is AnalyzeQualifiedElementResult.Skip && element.text.startsWith(ROOT_PREFIX_WITH_DOT))
+                    AnalyzeQualifiedElementResult.ShortenNow
+                else
+                    it
+            }
+
+        private fun analyzeQualifiedElement2(element: KtUserType, bindingContext: BindingContext): AnalyzeQualifiedElementResult {
             if (element.qualifier == null) return AnalyzeQualifiedElementResult.Skip
             val referenceExpression = element.referenceExpression ?: return AnalyzeQualifiedElementResult.Skip
 
