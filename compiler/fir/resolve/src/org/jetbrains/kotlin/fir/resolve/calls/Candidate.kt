@@ -68,19 +68,11 @@ class Candidate(
 
     fun dispatchReceiverExpression(): FirExpression = when (explicitReceiverKind) {
         ExplicitReceiverKind.DISPATCH_RECEIVER, ExplicitReceiverKind.BOTH_RECEIVERS -> callInfo.explicitReceiver!!
-        else -> dispatchReceiverValue?.let {
-            FirThisReceiverExpressionImpl(null, FirImplicitThisReference(it.klassSymbol)).apply {
-                typeRef = FirResolvedTypeRefImpl(null, it.type)
-            }
-        } ?: FirNoReceiverExpression
+        else -> dispatchReceiverValue?.receiverExpression ?: FirNoReceiverExpression
     }
 
     fun extensionReceiverExpression(): FirExpression = when (explicitReceiverKind) {
         ExplicitReceiverKind.EXTENSION_RECEIVER, ExplicitReceiverKind.BOTH_RECEIVERS -> callInfo.explicitReceiver!!
-        else -> implicitExtensionReceiverValue?.let {
-            FirThisReceiverExpressionImpl(null, FirImplicitThisReference(it.boundSymbol)).apply {
-                typeRef = FirResolvedTypeRefImpl(null, it.type)
-            }
-        } ?: FirNoReceiverExpression
+        else -> implicitExtensionReceiverValue?.receiverExpression ?: FirNoReceiverExpression
     }
 }
